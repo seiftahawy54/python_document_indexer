@@ -75,5 +75,14 @@ class TermDocumentMatrix:
 
     def computeSimilarity(self, phrase, document):
         [alluniquewordsDocs, alluniquewordsQuery, dfForWordInDocs, dfForWordInQuery, numberofwordsindoc, docLength, queryLength] = self.computeMatrix(phrase, document)
-        return spmatrix.dot(dfForWordInDocs, dfForWordInQuery)
+        dotProduct = 0
+        euclidean_length = docLength * queryLength
+
+        for word in dfForWordInQuery:
+            dotProduct += dfForWordInQuery[str(word)] * dfForWordInDocs[str(word)]
+
+        return dotProduct / euclidean_length
+
+
+
 
