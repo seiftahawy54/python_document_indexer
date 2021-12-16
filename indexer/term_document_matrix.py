@@ -2,7 +2,10 @@ from . tokenizer import Tokenizer
 from dataclasses import dataclass
 from scipy.sparse import spmatrix
 from . document_collection import DocumentCollection
+from math import log10, sqrt
 import os
+from collections import Counter
+
 
 
 @dataclass
@@ -20,31 +23,57 @@ class TermDocumentMatrix:
         self.documentCollection = documentCollection
         self.computeMatrix()
 
-    def computeMatrix(self):
-        alluniquewords = dict()
-        # firstdoc = open("../sample_collection/001", "r")
-        # paragraphs = firstdoc.read()
 
-        allwantedfiles = os.listdir('../sample_collection')
+    def computeMatrix(self, query, document):
+        alluniquewordsDocs = Counter()
+        alluniquewordsQuery = Counter()
+        queryWordsSplitted = query.split()
+        dfForWordInDocs = Counter()
+        dfForWordInQuery = Counter()
+        numberofwordsindoc = 0
+        squareddoclength = 0
+        squaredquerylength = 0
 
-        for file in allwantedfiles:
-            currentfile = open('../sample_collection/' + file, "r")
-            filecontent = currentfile.read()
+        # Compute Document Materix
+        allwantedfiles = open(document, "r")
 
-            for word in filecontent.split():
-                word = word.lower()
-                if word in alluniquewords:
-                    alluniquewords[str(word)] += 1
-                else:
-                    alluniquewords[str(word)] = 1
+        for word in allwantedfiles:
+            numberofwordsindoc += 1
+            word = word.lower()
+            if word in alluniquewordsDocs:
+                alluniquewordsDocs[str(word)] += 1
+            else:
+                alluniquewordsDocs[str(word)] = 1
 
-        writing_file = open("unique_words", "w+")
-        for words in alluniquewords:
-            writing_file.write(words + " : " + str(alluniquewords[words]))
+        for word in queryWordsSplitted:
+            word = word.lower()
+            if word in alluniquewordsDocs:
+                alluniquewordsQuery[str(word)] += 1
+            else:
+                alluniquewordsQuery[str(word)] = 1
+
+        for word in alluniquewordsDocs:
+            dfForWordInDocs[str(word)] = log10(numberofwordsindoc / alluniquewordsDocs[str(word)])
+
+        for word in alluniquewordsQuery:
+            dfForWordInQuery[str(word)] = log10(numberofwordsindoc / alluniquewordsQuery[str(word)])
+
+        for value in dfForWordInDocs:
+            squareddoclength += dfForWordInDocs[str(value)] ** 2
+
+        for value in dfForWordInQuery:
+            squaredquerylength += dfForWordInQuery[str(value)] ** 2
+
+        print(sqrt(squareddoclength), sqrt(squaredquerylength))
+
+        return [alluniquewordsDocs, alluniquewordsQuery, dfForWordInDocs, dfForWordInQuery, numberofwordsindoc, sqrt(squareddoclength), sqrt(squaredquerylength)]
+
 
     #######
     # Query
     #######
 
     def computeSimilarity(self, phrase, document):
-        raise NotImplementedError
+        [alluniquewordsDocs, alluniquewordsQuery, dfForWordInDocs, dfForWordInQuery, numberofwordsindoc, docLength, queryLength] = self.computeMatrix(phrase, document)
+        return spmatrix.dot(dfForWordInDocs, dfForWordInQuery)
+
