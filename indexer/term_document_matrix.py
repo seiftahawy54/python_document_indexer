@@ -6,8 +6,6 @@ from math import log10, sqrt
 import os
 from collections import Counter
 
-
-
 @dataclass
 class TermDocumentMatrix:
     tokenizer: Tokenizer
@@ -24,65 +22,35 @@ class TermDocumentMatrix:
         self.computeMatrix()
 
 
-    def computeMatrix(self, query, document):
+    def computeMatrix(self):
         alluniquewordsDocs = Counter()
-        alluniquewordsQuery = Counter()
-        queryWordsSplitted = query.split()
         dfForWordInDocs = Counter()
-        dfForWordInQuery = Counter()
         numberofwordsindoc = 0
         squareddoclength = 0
-        squaredquerylength = 0
 
         # Compute Document Materix
-        allwantedfiles = open(document, "r")
+        allwantedfiles = open(self.documentCollection, "r")
 
-        for word in allwantedfiles:
-            numberofwordsindoc += 1
-            word = word.lower()
-            if word in alluniquewordsDocs:
-                alluniquewordsDocs[str(word)] += 1
-            else:
-                alluniquewordsDocs[str(word)] = 1
-
-        for word in queryWordsSplitted:
-            word = word.lower()
-            if word in alluniquewordsDocs:
-                alluniquewordsQuery[str(word)] += 1
-            else:
-                alluniquewordsQuery[str(word)] = 1
+        alluniquewordsDocs = self.tokenizer.scanner(allwantedfiles)
 
         for word in alluniquewordsDocs:
             dfForWordInDocs[str(word)] = log10(numberofwordsindoc / alluniquewordsDocs[str(word)])
 
-        for word in alluniquewordsQuery:
-            dfForWordInQuery[str(word)] = log10(numberofwordsindoc / alluniquewordsQuery[str(word)])
-
         for value in dfForWordInDocs:
             squareddoclength += dfForWordInDocs[str(value)] ** 2
 
-        for value in dfForWordInQuery:
-            squaredquerylength += dfForWordInQuery[str(value)] ** 2
-
-        print(sqrt(squareddoclength), sqrt(squaredquerylength))
-
-        return [alluniquewordsDocs, alluniquewordsQuery, dfForWordInDocs, dfForWordInQuery, numberofwordsindoc, sqrt(squareddoclength), sqrt(squaredquerylength)]
-
+        self.matrix = dfForWordInDocs
 
     #######
     # Query
     #######
 
     def computeSimilarity(self, phrase, document):
-        [alluniquewordsDocs, alluniquewordsQuery, dfForWordInDocs, dfForWordInQuery, numberofwordsindoc, docLength, queryLength] = self.computeMatrix(phrase, document)
-        dotProduct = 0
-        euclidean_length = docLength * queryLength
+        tfidfdoc = 0
 
-        for word in dfForWordInQuery:
-            dotProduct += dfForWordInQuery[str(word)] * dfForWordInDocs[str(word)]
+        for word in self.matrix:
+            tfidfdoc += log10(1 + self.matrix[str(word)]) * log10(self.matrix.len / self.matrix[str(word)])
 
-        return dotProduct / euclidean_length
-
-
+        return tfidfdoc
 
 
