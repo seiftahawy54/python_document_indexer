@@ -1,15 +1,11 @@
 import pickle
+
 from .tokenizer import Tokenizer
 from dataclasses import dataclass
 from scipy.sparse import spmatrix
-import numpy as np
+from scipy.sparse import csr_matrix
 from .document_collection import DocumentCollection
-from collections import Counter
 from math import log10
-
-def my_printer(counterObject: Counter):
-    for word in counterObject:
-        print(f"{word} : {counterObject[str(word)]}")
 
 @dataclass
 class TermDocumentMatrix:
@@ -28,48 +24,32 @@ class TermDocumentMatrix:
 
     def computeMatrix(self, positionalIndex):
 
-        # frequenceies of all words     -> calculated
-        # number of all words           -> finished
-        # df for each word              -> calculated
-        # idf for each word             -> calculated
-        # tf_idf for each word          -> calculated
-        # sparse matrix                 -> returned
+        N = 0
+        for doc in self.documentCollection.__iter__():
+            N += 1
 
-        # alluniquewordsDocs = Counter()
-        dfForWordInDocs = Counter()
-        idf_for_word_in_docs = Counter()
-        tf_idf_for_words_in_docs = Counter()
-        dfForWordInDocsArr = []
-        squareddoclength = 0
-        numberofwordsindoc = positionalIndex.numberOfDocuments
+        i = 0
+        documentsArr = [None] * N
+        for doc in self.documentCollection.__iter__():
+            documentsArr[i] = str(doc.path)[18:21]
+            i += 1
 
-        # frequenceies of all words && number of all words
+        x, y = N, len(positionalIndex.dictionary.items())
+        data_arr = csr_matrix((x, y)).toarray()
+
+        k, j = 0, 0
         for term, postingsList in positionalIndex.dictionary.items():
-            # Compute the number of documents that contains the term.
-            dfForWordInDocs[str(term)] = len(postingsList.postings)
+            dft = len(postingsList.postings)
+            idft = log10(N / len(postingsList.postings))
+            for posting in postingsList.postings:
+                tftd = posting.frequency
+                tfidftd = tftd * idft
+                data_arr[j][k] = tfidftd
+                j += 1
+            j = 0
+            k += 1
 
-        # idf for each word
-        for word, postingsList in positionalIndex.dictionary.items():
-            idf_for_word_in_docs[str(word)] = log10(numberofwordsindoc / dfForWordInDocs[str(word)])
-
-        # tf_idf for each word
-        for word, postingsList in positionalIndex.dictionary.items():
-            tf_idf_for_words_in_docs[str(word)] = log10(1 + dfForWordInDocs[str(word)]) * idf_for_word_in_docs[
-                str(word)]
-
-        # transform idf counter to idf
-        tf_idf_for_words_in_docs_arr = [None] * len(list(dfForWordInDocs))
-        for i, word in enumerate(dfForWordInDocs):
-            tf_idf_for_words_in_docs_arr[i] = tf_idf_for_words_in_docs[str(word)]
-
-        unique_words_arr = [None] * len(list(dfForWordInDocs))
-        for i, word in enumerate(dfForWordInDocs):
-            unique_words_arr[i] = word
-
-        # sparse matrix
-        self.matrix = [unique_words_arr], [tf_idf_for_words_in_docs_arr]
-        print(self.matrix)
-
+        self.matrix = data_arr
     #######
     # Query
     #######
